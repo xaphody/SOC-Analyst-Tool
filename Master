@@ -2,10 +2,12 @@ from tkinter import *
 import webbrowser
 import requests
 import json
+import csv
 
 # Frames
 root = Tk()
 root.geometry('600x60+400+20')
+#Forces program to be ontop of everything
 root.wm_attributes("-topmost", 1)
 root.resizable(True, True)
 root.title("Analyst Quick Tool")
@@ -15,20 +17,12 @@ TFrame.pack(side="top")
 BFrame.pack(side="top", expand=False)
 
 # Functions
-# Opens relevant pages for threat intelligence based on IP address
-def IPChecker(*args):
-	webbrowser.open_new("https://www.abuseipdb.com/check/" + IP.get())
-	webbrowser.open_new_tab(
-		"https://www.virustotal.com/gui/ip-address/" + IP.get() + "/details")
-	webbrowser.open_new_tab(
-		"https://exchange.xforce.ibmcloud.com/ip/" + IP.get())
-
 # Opens webpage for Port information
 def PortChecker(*args):
 	webbrowser.open_new(
 		"https://www.speedguide.net/port.php?port=" + IP.get())
 
-# Opens webpage for verifying email address
+# Returns Threat information for Email Addresses
 def Email_Checker():
 	NW = Toplevel(root)
 	NW.geometry('280x310+118+20')
@@ -39,10 +33,10 @@ def Email_Checker():
 	print(url)
 	headers = {
 				"Accept": "application/json",
-				"key": "KEY GOES HERE"
+				"key": ""
 				}
 
-	response = requests.request(method="GET", url=url, headers=headers, verify=False)
+	response = requests.request(method="GET", url=url, headers=headers)
 	load = json.loads(response.text)
 	result = json.dumps(load,sort_keys=True,indent=1)
 	IB.insert(END, result)
@@ -65,7 +59,7 @@ def IPPHN(*args):
 def Clear():
 	IP.delete(0, END)
 
-
+#Returns a JSON in a new window for IP threat intelligence
 def IPQuick(*args):
 	NW = Toplevel(root)
 	NW.geometry('280x310+118+20')
@@ -77,14 +71,15 @@ def IPQuick(*args):
 	print(url)
 	headers = {
 		'Accept': 'application/json',
-		'Key': 'KEY GOES HERE'
+		'Key': ''
 	}
-	response = requests.request(method='GET', url=url, headers=headers, verify=False)
+	response = requests.request(method='GET', url=url, headers=headers)
 	# Formatted output
 	#result = response.text
 	load = json.loads(response.text)
 	# print (json.dumps(decodedResponse, sort_keys=True, indent=4,))
 	result = json.dumps(load,sort_keys=True,indent=1).split("\\")
+	
 	IB.insert(END, result)
 	IB.insert(END,"\n")
 	IB.insert(END, "https://www.abuseipdb.com/check/" + IP.get())
@@ -92,12 +87,21 @@ def IPQuick(*args):
 	IB.insert(END, "https://exchange.xforce.ibmcloud.com/ip/" + IP.get())
 	IB.insert(END, "\n")
 	IB.insert(END, "https://www.virustotal.com/gui/ip-address/" + IP.get())
-	root.mainloop()
-#	attempt to split the results into fields.
-#	with open(load, ) as data:
-#		for x in data.read().split(","):
-#			IP.insert(END, x)
 
+# adds an entry to a csv file for tracking
+
+	dbu = {"IP Address": 0,
+          "Rep":0
+          }
+	dbu["IP Address"] = IP.get()
+	dbu["Rep"]= load['data']['abuseConfidenceScore']
+	with open('some.csv', 'a') as f:
+		fieldnames = ['IP Address','Rep']
+		writer = csv.DictWriter(f, fieldnames)
+		writer.writerow(dbu)
+	root.mainloop()
+
+#Returns a JSON for URL threat intelligence
 def URLCheck(*args):
 	NW = Toplevel(root)
 	NW.geometry('280x310+118+20')
@@ -108,15 +112,16 @@ def URLCheck(*args):
 
 	url = 'https://www.virustotal.com/vtapi/v2/url/report'
 
-	params = {'apikey': 'KEY GOES HERE', 'resource':Query}
+	params = {'apikey': '', 'resource':Query}
 
-	response = requests.get(url, params=params, verify=False)
+	response = requests.get(url, params=params)
 	load = json.loads(response.text)
 	result = json.dumps(load,sort_keys=True,indent=2).split("\\")
 	params['resource']= Query
 	IB.insert(END, result)
 
-# Grid Management
+
+# Grid Management, Buttons and function bindings
 IP = Entry(TFrame, width=92)
 ECB = Button(BFrame, text="Email Rep", command=Email_Checker, width=10)
 CB = Button(BFrame, text="Clear", command=Clear, width=10)
